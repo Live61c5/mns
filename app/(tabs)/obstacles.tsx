@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SafeAreaView,
   View,
@@ -9,7 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { storeData } from '../utils/storage';
+import { storeData, getData } from '../utils/storage';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 // Define an interface for the data items
@@ -23,6 +23,53 @@ interface DataItem {
 
 export default function ObstaclesScreen() {
   const insets = useSafeAreaInsets();
+  const [name, setName] = useState('');
+  const [indication, setIndication] = useState('');
+  const [position, setPosition] = useState('');
+  const [imageUri, setImageUri] = useState('');
+  const [data, setData] = useState<DataItem[]>([]); // Explicitly type the data state
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const storedData = await getData('dataList');
+      if (storedData) {
+        setData(JSON.parse(storedData));
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Handle form submission to store data
+  const addData = async () => {
+    const newItem: DataItem = {
+      id: data.length + 1,
+      name,
+      indication,
+      position,
+      imageUri,
+    };
+
+    // Save to state and AsyncStorage (optional)
+    const newData = [...data, newItem];
+    setData(newData);
+    await storeData('dataList', JSON.stringify(newData)); // Storing data locally
+
+    // Reset form inputs
+    setName('');
+    setIndication('');
+    setPosition('');
+    setImageUri('');
+  };
+
+  // Handle image selection
+  const selectImage = () => {
+    launchImageLibrary({ mediaType: 'photo' }, (response) => {
+      if (response.assets && response.assets.length > 0 && response.assets[0].uri) {
+        setImageUri(response.assets[0].uri);
+      }
+    });
+  };
 
   const styles = StyleSheet.create({
     safeView: {
@@ -54,44 +101,6 @@ export default function ObstaclesScreen() {
       marginBottom: 10,
     },
   });
-
-  // Initial state for form inputs
-  const [name, setName] = useState('');
-  const [indication, setIndication] = useState('');
-  const [position, setPosition] = useState('');
-  const [imageUri, setImageUri] = useState('');
-  const [data, setData] = useState<DataItem[]>([]); // Explicitly type the data state
-
-  // Handle form submission to store data
-  const addData = async () => {
-    const newItem: DataItem = {
-      id: data.length + 1,
-      name,
-      indication,
-      position,
-      imageUri,
-    };
-    
-    // Save to state and AsyncStorage (optional)
-    const newData = [...data, newItem];
-    setData(newData);
-    await storeData('dataList', JSON.stringify(newData)); // Storing data locally
-
-    // Reset form inputs
-    setName('');
-    setIndication('');
-    setPosition('');
-    setImageUri('');
-  };
-
-  // Handle image selection
-  const selectImage = () => {
-    launchImageLibrary({ mediaType: 'photo' }, (response) => {
-      if (response.assets && response.assets.length > 0 && response.assets[0].uri) {
-        setImageUri(response.assets[0].uri);
-      }
-    });
-  };
 
   return (
     <SafeAreaView style={styles.safeView}>
