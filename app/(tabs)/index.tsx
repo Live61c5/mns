@@ -1,70 +1,98 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  SafeAreaView,
+  View,
+  FlatList,
+  StyleSheet,
+  Text,
+  Image,
+  Button,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getData, removeData, storeData } from '../utils/storage';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+interface DataItem {
+  id: number;
+  name: string;
+  indication: string;
+  position: string;
+  imageUri: string;
 }
 
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
+export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+  const [data, setData] = useState<DataItem[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const storedData = await getData('dataList');
+      if (storedData) {
+        setData(JSON.parse(storedData));
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const styles = StyleSheet.create({
+    safeView: {
+      marginTop: insets.top,
+      marginBottom: insets.bottom,
+      marginRight: insets.right,
+      marginLeft: insets.left,
+      flex: 1,
+      padding: 16,
+      justifyContent: 'center',
+    },
+    item: {
+      padding: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: 'gray',
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      marginBottom: 20,
+      
+    },
+    image: {
+      width: 100,
+      height: 100,
+      alignSelf: 'center', 
+      marginTop: 10,
+      marginBottom: 10, 
+    },
+  });
+
+  const Item = ({ name, indication, position, imageUri }: DataItem) => (
+    
+    <View style={styles.item}>
+      <Text>Name: {name}</Text>
+      <Text>Indication: {indication}</Text>
+      <Text>Position: {position}</Text>
+      {imageUri ? <Image source={{ uri: imageUri }} style={styles.image} /> : null}
+      <Button
+        title="Remove"
+        onPress={async () => {
+          const newData = data.filter((item) => item.name !== name);
+          setData(newData);
+          await removeData('dataList');
+          await storeData('dataList', JSON.stringify(newData));
+        }}
+      />
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeView}>
+      <Text style={{textAlign: 'center', fontWeight: 'bold', marginBottom: 25, marginTop: 25 }}>
+        Liste des obstacles
+      </Text>
+      <FlatList
+        data={data}
+        renderItem={({ item }) => <Item {...item} />}
+        keyExtractor={(item) => item.id.toString()}
+      />
+    </SafeAreaView>
+  );
+}
